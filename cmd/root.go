@@ -33,12 +33,14 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var name string
-var namespace string
-var gatewayName string
-var inputFile string
-var outputFile string
-var hostnames string
+var (
+	name        string
+	namespace   string
+	gatewayName string
+	inputFile   string
+	outputFile  string
+	hostnames   string
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
