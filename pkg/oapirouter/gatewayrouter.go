@@ -3,8 +3,8 @@ package oapirouter
 import (
 	"fmt"
 
-	"github.com/blang/semver"
 	oapi "github.com/pb33f/libopenapi"
+	v3high "github.com/pb33f/libopenapi/datamodel/high/v3"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -24,54 +24,55 @@ func NewGatewayRouter(gateway gatewayv1.Gateway) *GatewayRouter {
 	}
 }
 
-// DocumentToHTTPRoute converts an OpenAPI document to a Gateway API HTTPRoute
-// and returns it along with any errors encountered during the conversion.
-func DocumentToHTTPRoute(doc oapi.Document) (gatewayv1.HTTPRoute, []error) {
-	// Define a variable to hold any errors
-	var errs []error
-	// Create documentModel to hold the OpenAPI documentModel
-	var documentModel oapi.DocumentModel
-	// Check which version of the OpenAPI spec is being used
-	version, err := semver.Parse(doc.GetVersion())
-	if err != nil {
-		err := fmt.Errorf("invalid OpenAPI version: %s", doc.GetVersion())
-		return gatewayv1.HTTPRoute{}, append(errs, err)
+// DocumentModelToHTTPRoute converts an OpenAPI DocumentModel to a Gateway API HTTPRoute.
+// This function only supports OpenAPI version 3.
+func DocumentModelToHTTPRoute(model *oapi.DocumentModel[v3high.Document]) (gatewayv1.HTTPRoute, error) {
+	// Check if the DocumentModel is for OpenAPI version 3
+
+	// Initialize an HTTPRoute object
+	var httpRoute gatewayv1.HTTPRoute
+
+	httpRoute.Name = ToKubernetesResourceName(model.Model.Info.Title)
+
+	// Extract paths from the DocumentModel
+	paths := model.Model.Paths
+	if paths == nil || paths.PathItems.IsZero() {
+		return httpRoute, fmt.Errorf("no paths found in the OpenAPI document model")
 	}
 
-	switch version.Major {
-	case 3:
-		// OpenAPI 3.x.x to DocumentModel
-		documentModel, errs = doc.BuildV3Model()
-		if len(errs) > 0 {
-			return gatewayv1.HTTPRoute{}, errs
+	// Iterate over paths and create HTTPRoute rules
+	for path, pathItem := range paths.PathItems.FromNewest() {
+		for method, operation := range pathItem.GetOperations().FromNewest() {
+
+			// Create matchType
+			var matchType gatewayv1.PathMatchType
+			// Set method for exact match
+			if len(operation.Parameters) == 0 {
+				matchType = gatewayv1.PathMatchExact
+			}
+
+			// Create method
+			method := gatewayv1.HTTPMethod(method)
+
+			// Create HTTPRouteMatch
+			match := gatewayv1.HTTPRouteMatch{
+				Path: &gatewayv1.HTTPPathMatch{
+					Type:  &matchType,
+					Value: &path,
+				},
+				Method: &method,
+			}
+
+			// Create HTTPRouteRule
+			rule := gatewayv1.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{match},
+			}
+
+			// Add the rule to the HTTPRoute
+			httpRoute.Spec.Rules = append(httpRoute.Spec.Rules, rule)
 		}
-	case 2:
-		// OpenAPI 2.x.x to DocumentModel
-		documentModel, errs = doc.BuildV2Model()
-		if len(errs) > 0 {
-			return gatewayv1.HTTPRoute{}, errs
-		}
-	default:
-		// Handle unsupported versions
-		err := fmt.Errorf("unsupported OpenAPI version: %s", doc.GetVersion())
-		return gatewayv1.HTTPRoute{}, append(errs, err)
 	}
 
-	// Placeholder return
-	return gatewayv1.HTTPRoute{}, errs
-}
-
-// RouteDocument takes an OpenAPI document and adds it to the GatewayRouter
-// as an HTTPRoute.
-func (g *GatewayRouter) RouteDocument(doc oapi.Document) error {
-	// Convert the OpenAPI document to a Gateway API HTTPRoute
-	route, err := DocumentToHTTPRoute(doc)
-	if err != nil {
-		return err
-	}
-
-	// Add the route to the GatewayRouter's routes map
-	g.routes[doc] = route
-
-	return nil
+	// Return the constructed HTTPRoute
+	return httpRoute, nil
 }

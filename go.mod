@@ -5,9 +5,10 @@ go 1.24.0
 toolchain go1.24.3
 
 require (
-	github.com/blang/semver v3.5.1+incompatible
 	github.com/pb33f/libopenapi v0.21.10
+	k8s.io/apimachinery v0.32.3
 	sigs.k8s.io/gateway-api v1.3.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -31,10 +32,8 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apimachinery v0.32.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 )
