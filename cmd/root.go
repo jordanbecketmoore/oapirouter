@@ -22,9 +22,13 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/jordanbecketmoore/oapirouter/pkg/oapirouter"
+	"github.com/pb33f/libopenapi"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
 )
 
 var name string
@@ -44,11 +48,55 @@ to handle the routing of HTTP requests in your applications inside a Kubernetes 
 using Gateway API resources.
 
 Example usage:
-oapirouter --name my-route --namespace my-namespace --gateway-name my-gateway --input /path/to/openapi.yaml
+	oapirouter --httproute-name my-http-route --gateway-name my-gateway --input /path/to/openapi.yaml
+
 This command will generate an HTTPRoute resource based on the provided OpenAPI spec and print it to stdout.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+
+	Run: func(cmd *cobra.Command, args []string) {
+		// Load input file
+		if inputFile == "" {
+			cmd.PrintErrln("Error: --input flag is required") // TODO enable reading from stdin
+			os.Exit(1)
+		}
+
+		inputData, err := os.ReadFile(inputFile)
+		if err != nil {
+			cmd.PrintErrf("Error reading input file: %v\n", err)
+			os.Exit(1)
+		}
+		document, err := libopenapi.NewDocument(inputData)
+		if err != nil {
+			fmt.Errorf("Failed to create document: %v", err)
+		}
+
+		// Build document model
+		documentModel, errs := document.BuildV3Model()
+		if len(errs) > 0 {
+			fmt.Errorf("Expected no errors, but got %v", errs)
+		}
+		httpRoute, err := oapirouter.DocumentModelToHTTPRoute(documentModel)
+		if err != nil {
+			fmt.Errorf("Expected no error, but got %v", err)
+		}
+
+		// Marhshal the HTTPRoute to YAML for better readability
+		httpRouteYAML, err := yaml.Marshal(httpRoute)
+		if err != nil {
+			fmt.Errorf("Failed to marshal HTTPRoute to YAML: %v", err)
+		}
+
+		if outputFile != "" {
+			err = os.WriteFile(outputFile, httpRouteYAML, 0644)
+			if err != nil {
+				cmd.PrintErrf("Error writing output file: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("HTTPRoute resource written to %s\n", outputFile)
+		} else {
+			fmt.Printf("%s", string(httpRouteYAML))
+		}
+
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -61,14 +109,9 @@ func Execute() {
 }
 
 func init() {
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.oapirouter.yaml)")
-	rootCmd.PersistentFlags().StringVar(&name, "name", "", "Specify a name for the HTTPRoute resource")
+	rootCmd.PersistentFlags().StringVar(&name, "httproute-name", "", "Specify a name for the HTTPRoute resource")
 	rootCmd.PersistentFlags().StringVar(&namespace, "namespace", "", "Specify a namespace for the HTTPRoute resource")
 	rootCmd.PersistentFlags().StringVar(&gatewayName, "gateway-name", "", "Specify a gateway for the HTTPRoute resource")
 	rootCmd.PersistentFlags().StringVar(&inputFile, "input", "", "Location of the OpenAPI spec file")
 	rootCmd.PersistentFlags().StringVar(&outputFile, "output", "", "Location of the OpenAPI spec file")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

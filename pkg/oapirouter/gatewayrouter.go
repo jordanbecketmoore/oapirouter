@@ -32,6 +32,8 @@ func DocumentModelToHTTPRoute(model *oapi.DocumentModel[v3high.Document]) (gatew
 
 	// Initialize an HTTPRoute object
 	var httpRoute gatewayv1.HTTPRoute
+	httpRoute.APIVersion = gatewayv1.SchemeGroupVersion.String()
+	httpRoute.Kind = "HTTPRoute"
 
 	httpRoute.Name = ToKubernetesResourceName(model.Model.Info.Title)
 
