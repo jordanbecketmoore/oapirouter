@@ -24,10 +24,12 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/jordanbecketmoore/oapirouter/pkg/oapirouter"
 	"github.com/pb33f/libopenapi"
 	"github.com/spf13/cobra"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -36,6 +38,7 @@ var namespace string
 var gatewayName string
 var inputFile string
 var outputFile string
+var hostnames string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -79,6 +82,15 @@ This command will generate an HTTPRoute resource based on the provided OpenAPI s
 			fmt.Errorf("Expected no error, but got %v", err)
 		}
 
+		// Set hostnames for HTTPRoute
+		if hostnames != "" {
+			// Split hostnames by comma and add to HTTPRoute
+			hostnameList := strings.Split(hostnames, ",")
+			for _, hostname := range hostnameList {
+				httpRoute.Spec.Hostnames = append(httpRoute.Spec.Hostnames, gatewayv1.Hostname(hostname))
+			}
+		}
+
 		// Marhshal the HTTPRoute to YAML for better readability
 		httpRouteYAML, err := yaml.Marshal(httpRoute)
 		if err != nil {
@@ -114,4 +126,5 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&gatewayName, "gateway-name", "", "Specify a gateway for the HTTPRoute resource")
 	rootCmd.PersistentFlags().StringVar(&inputFile, "input", "", "Location of the OpenAPI spec file")
 	rootCmd.PersistentFlags().StringVar(&outputFile, "output", "", "Location of the OpenAPI spec file")
+	rootCmd.PersistentFlags().StringVar(&hostnames, "hostnames", "", "Specify hostnames as a comma-separated list for the HTTPRoute resource")
 }
