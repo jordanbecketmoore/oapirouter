@@ -15,6 +15,15 @@ type GatewayRouter struct {
 	routes map[oapi.Document]gatewayv1.HTTPRoute
 }
 
+// NewGatewayRouter creates a new GatewayRouter object
+// with the provided Gateway and initializes the routes map.
+func NewGatewayRouter(gateway gatewayv1.Gateway) *GatewayRouter {
+	return &GatewayRouter{
+		Gateway: gateway,
+		routes:  make(map[oapi.Document]gatewayv1.HTTPRoute),
+	}
+}
+
 // DocumentToHTTPRoute converts an OpenAPI document to a Gateway API HTTPRoute
 // and returns it along with any errors encountered during the conversion.
 func DocumentToHTTPRoute(doc oapi.Document) (gatewayv1.HTTPRoute, []error) {
