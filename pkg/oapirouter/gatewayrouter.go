@@ -47,18 +47,25 @@ func DocumentModelToHTTPRoute(model *oapi.DocumentModel[v3high.Document]) (gatew
 			// Create matchType
 			var matchType gatewayv1.PathMatchType
 			// Set method for exact match
-			if len(operation.Parameters) == 0 {
+			switch {
+			case HasNoParameters(operation):
 				matchType = gatewayv1.PathMatchExact
+			case HasPathParameters(operation):
+				matchType = gatewayv1.PathMatchRegularExpression
+			case HasQueryParameters(operation):
+				matchType = gatewayv1.PathMatchPathPrefix
 			}
 
 			// Create method
 			method := gatewayv1.HTTPMethod(method)
 
+			// If path contains parameters, convert to regex
+			regexpPath := ToRegularExpressionPath(path)
 			// Create HTTPRouteMatch
 			match := gatewayv1.HTTPRouteMatch{
 				Path: &gatewayv1.HTTPPathMatch{
 					Type:  &matchType,
-					Value: &path,
+					Value: &regexpPath,
 				},
 				Method: &method,
 			}

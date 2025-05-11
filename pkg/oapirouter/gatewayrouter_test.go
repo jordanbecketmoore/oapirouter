@@ -2,6 +2,7 @@ package oapirouter
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/jordanbecketmoore/oapirouter/test/constants"
@@ -25,9 +26,129 @@ func TestNewGatewayRouter(t *testing.T) {
 }
 
 func TestDocumentModelToHTTPRouteExact(t *testing.T) {
+	// Declare errors slice
 	var errs []error
-	documentString := constants.TestOAPI3DocStringExact
+
+	// Build document string
+	documentString := strings.Join([]string{
+		constants.PetstoreOpenAPI3Metadata,
+		"paths:",
+		constants.PetstoreOpenAPI3PathsExact,
+		constants.PetstoreOpenAPI3Components,
+	}, "\n")
+
+	// Build document
 	document, _ := libopenapi.NewDocument([]byte(documentString))
+
+	// Build document model
+	documentModel, errs := document.BuildV3Model()
+	if len(errs) > 0 {
+		t.Errorf("Expected no errors, but got %v", errs)
+	}
+	httpRoute, err := DocumentModelToHTTPRoute(documentModel)
+	if err != nil {
+		t.Errorf("Expected no error, but got %v", err)
+	}
+
+	// Marhshal the HTTPRoute to YAML for better readability
+	httpRouteYAML, err := yaml.Marshal(httpRoute)
+	if err != nil {
+		t.Errorf("Failed to marshal HTTPRoute to YAML: %v", err)
+	}
+	// Print the YAML
+	fmt.Printf("HTTPRoute YAML:\n%s\n", string(httpRouteYAML))
+
+	// Validate the HTTPRoute object
+	scheme := runtime.NewScheme()
+	err = gatewayv1.Install(scheme) // Register Gateway API types
+	if err != nil {
+		t.Fatalf("Failed to add Gateway API types to scheme: %v", err)
+	}
+
+	// Create a serializer for decoding and validating
+	codecs := serializer.NewCodecFactory(scheme)
+	decoder := codecs.UniversalDeserializer()
+
+	// Encode the object to YAML and decode it back to validate
+	_, _, err = decoder.Decode(httpRouteYAML, nil, &gatewayv1.HTTPRoute{})
+	if err != nil {
+		t.Errorf("HTTPRoute validation failed: %v", err)
+	}
+}
+
+func TestDocumentModelToHTTPRouteQuery(t *testing.T) {
+	// Declare errors slice
+	var errs []error
+
+	// Build document string
+	documentString := strings.Join([]string{
+		constants.PetstoreOpenAPI3Metadata,
+		"paths:",
+		constants.PetstoreOpenAPI3PathsQueries,
+		constants.PetstoreOpenAPI3Components,
+	}, "\n")
+
+	// Build document
+	document, err := libopenapi.NewDocument([]byte(documentString))
+	if err != nil {
+		t.Errorf("Failed to create document: %v", err)
+	}
+
+	// Build document model
+	documentModel, errs := document.BuildV3Model()
+	if len(errs) > 0 {
+		t.Errorf("Expected no errors, but got %v", errs)
+	}
+	httpRoute, err := DocumentModelToHTTPRoute(documentModel)
+	if err != nil {
+		t.Errorf("Expected no error, but got %v", err)
+	}
+
+	// Marhshal the HTTPRoute to YAML for better readability
+	httpRouteYAML, err := yaml.Marshal(httpRoute)
+	if err != nil {
+		t.Errorf("Failed to marshal HTTPRoute to YAML: %v", err)
+	}
+	// Print the YAML
+	fmt.Printf("HTTPRoute YAML:\n%s\n", string(httpRouteYAML))
+
+	// Validate the HTTPRoute object
+	scheme := runtime.NewScheme()
+	err = gatewayv1.Install(scheme) // Register Gateway API types
+	if err != nil {
+		t.Fatalf("Failed to add Gateway API types to scheme: %v", err)
+	}
+
+	// Create a serializer for decoding and validating
+	codecs := serializer.NewCodecFactory(scheme)
+	decoder := codecs.UniversalDeserializer()
+
+	// Encode the object to YAML and decode it back to validate
+	_, _, err = decoder.Decode(httpRouteYAML, nil, &gatewayv1.HTTPRoute{})
+	if err != nil {
+		t.Errorf("HTTPRoute validation failed: %v", err)
+	}
+}
+
+func TestDocumentModelToHTTPRouteRegex(t *testing.T) {
+	// Declare errors slice
+	var errs []error
+
+	// Build document string
+	documentString := strings.Join([]string{
+		constants.PetstoreOpenAPI3Metadata,
+		"paths:",
+		constants.PetstoreOpenAPI3PathsRegex,
+		constants.PetstoreOpenAPI3Components,
+	}, "\n")
+
+	// Build document
+	document, err := libopenapi.NewDocument([]byte(documentString))
+	if err != nil {
+		t.Errorf("Failed to create document: %v", err)
+	}
+
+	// Build document model
 	documentModel, errs := document.BuildV3Model()
 	if len(errs) > 0 {
 		t.Errorf("Expected no errors, but got %v", errs)
