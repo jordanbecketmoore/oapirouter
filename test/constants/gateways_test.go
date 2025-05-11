@@ -1,4 +1,4 @@
-package oapirouter_test
+package constants
 
 import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"

@@ -1,4 +1,4 @@
-package oapirouter_test
+package constants
 
 // A static list of OpenAPI documents for testing purposes
 
