@@ -2,6 +2,7 @@ package oapirouter
 
 import (
 	"fmt"
+	"strings"
 
 	oapi "github.com/pb33f/libopenapi"
 	v3high "github.com/pb33f/libopenapi/datamodel/high/v3"
@@ -57,7 +58,7 @@ func DocumentModelToHTTPRoute(model *oapi.DocumentModel[v3high.Document]) (gatew
 			}
 
 			// Create method
-			method := gatewayv1.HTTPMethod(method)
+			method := gatewayv1.HTTPMethod(strings.ToUpper(method))
 
 			// If path contains parameters, convert to regex
 			regexpPath := ToRegularExpressionPath(path)
